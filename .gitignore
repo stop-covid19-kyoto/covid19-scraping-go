@@ -2,4 +2,4 @@
 go.sum
 pkg/
 *data.xlsx
-data/*
+data/*.yml
