@@ -1,0 +1,38 @@
+name: Deploy new data
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [update_data]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: install go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.13.1'
+    - name: Install dependencies
+      run: |
+        export GO111MODULE=on
+        go get github.com/360EntSecGroup-Skylar/excelize/v2
+        go get golang.org/x/oauth2
+        go get google.golang.org/api/gmail/v1
+    - name: Run script
+      env:
+        CLIENT_ID: ${{ secrets.CLIENT_ID }}
+        CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+        KYOTO_ADDR: ${{ secrets.KYOTO_ADDR }}
+        MY_ADDR:  ${{ secrets.MY_ADDR }}
+      run: |
+        TZ= go run main.go ${CLIENT_ID} ${CLIENT_SECRET} ${REFRESH_TOKEN} ${KYOTO_ADDR} ${MY_ADDR}
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./data
+        publish_branch: gh-pages
+        allow_empty_commit: true
