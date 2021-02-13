@@ -5,8 +5,7 @@ on:
   repository_dispatch:
     types: [update_data]
 
-jobs:g
-
+jobs:
   build:
     runs-on: ubuntu-20.04
     steps:
