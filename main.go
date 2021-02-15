@@ -27,7 +27,7 @@ func main() {
 	lastUpdate := getLastUpdate(lastUpdateTime)
 	patients := getPatients(*spreadsheet, lastUpdateTime)
 	patientsSummary := getPatientsSummary(patients, lastUpdateTime)
-	news := getNews(*spreadsheet, lastUpdateTime)
+	news := getNews(*spreadsheet)
 	inspectionsSummary := getInspectionsSummary(*spreadsheet, lastUpdateTime)
 	mainSummary := getMainSummary(*spreadsheet, lastUpdateTime)
 
@@ -399,7 +399,7 @@ func getInspectionsSummary(spreadsheet excelize.File, lastUpdateTime time.Time) 
 	return inspectionsSummary
 }
 
-func getNews(spreadsheet excelize.File, lastUpdateTime time.Time) News {
+func getNews(spreadsheet excelize.File) News {
 
 	rows, err := spreadsheet.GetRows("最新の情報")
 	errorHandling(err)
@@ -431,8 +431,7 @@ func getNews(spreadsheet excelize.File, lastUpdateTime time.Time) News {
 		newsItemSlice = append(newsItemSlice, newsItem)
 	}
 
-	news.Data = newsItemSlice
-	news.LastUpdate = lastUpdateTime.Format("2006/01/02 15:04")
+	news.NewsItems = newsItemSlice
 
 	return news
 }
@@ -614,8 +613,7 @@ type NewsItem struct {
 }
 
 type News struct {
-	Data       []NewsItem `json:"data"`
-	LastUpdate string     `json:"last_update"`
+	NewsItems []NewsItem `json:"newsItems"`
 }
 
 type SummarySection struct {
