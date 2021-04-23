@@ -245,11 +245,6 @@ func getMainSummary(spreadsheet excelize.File, lastUpdateTime time.Time) MainSum
 
 	mainSummaryPatients := MainSummaryPatients{}
 
-	cellPos, _ := excelize.CoordinatesToCellName(1, 2)
-	inspectionsStr, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
-	mainSummary.Attr = "検査実施人数"
-	mainSummary.Value, _ = strconv.Atoi(inspectionsStr)
-
 	for i := 0; i < 7; i++ {
 		mainSummaryPatients.Children = append(mainSummaryPatients.Children, SummarySection{})
 	}
@@ -341,6 +336,10 @@ func getMainSummary(spreadsheet excelize.File, lastUpdateTime time.Time) MainSum
 			break
 		}
 	}
+
+	inspectionsStr, _ := spreadsheet.GetCellValue("PCR検査件数", "B2")
+	mainSummary.Attr = "検査実施人数"
+	mainSummary.Value, _ = strconv.Atoi(inspectionsStr)
 
 	mainSummary.Children = append(mainSummary.Children, mainSummaryPatients)
 
