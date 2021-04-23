@@ -5,7 +5,7 @@
         {
             "attr": "陽性患者数",
             "value": 11427,
-            "summary_sections": [
+            "children": [
                 {
                     "attr": "入院中・入院調整中",
                     "value": 258
