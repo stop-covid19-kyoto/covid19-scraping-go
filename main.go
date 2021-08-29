@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -17,18 +19,31 @@ import (
 )
 
 func main() {
+	// 引数をパースする
 	flag.Parse()
-
+	// パースした引数をargs変数に格納する
 	args := flag.Args()
-
+	// メールボックスを取得
+	fmt.Println("メールボックスを取得しています")
 	spreadsheet, lastUpdateTime, err := getSpreadsheetFromGmail(args)
 	errorHandling(err)
-
+	// 最終更新日時を変換
+	fmt.Println("最終更新日時を変換しています")
 	lastUpdate := getLastUpdate(lastUpdateTime)
+	// 感染者の属性を変換
+	fmt.Println("感染者の属性を変換しています")
 	patients := getPatients(*spreadsheet, lastUpdateTime)
+	// 感染者のサマリーを変換
+	fmt.Println("感染者のサマリーを変換しています")
 	patientsSummary := getPatientsSummary(patients, lastUpdateTime)
+	// ニュースを変換
+	fmt.Println("ニュースを変換しています")
 	news := getNews(*spreadsheet)
+	// PCR検査件数のサマリーを変換
+	fmt.Println("PCR検査件数のサマリーを変換しています")
 	inspectionsSummary := getInspectionsSummary(*spreadsheet, lastUpdateTime)
+	// 検査陽性者の情報を変換
+	fmt.Println("検査陽性者の情報を変換しています")
 	mainSummary := getMainSummary(*spreadsheet, lastUpdateTime)
 
 	exportDatas(lastUpdate, patients, patientsSummary, news, inspectionsSummary, mainSummary)
@@ -61,11 +76,16 @@ func getSpreadsheetFromGmail(args []string) (*excelize.File, time.Time, error) {
 
 	client := config.Client(oauth2.NoContext, &token)
 
+	fmt.Println("メールボックスを開きます")
 	server, err := gmail.New(client)
 	errorHandling(err)
 
 	messages, err := server.Users.Messages.List("me").MaxResults(100).Q("NOT in:draft has:attachment from:" + args[3] + " OR from:" + args[4]).Do()
 	errorHandling(err)
+
+	if len(messages.Messages) <= 0 {
+		return nil, time.Now(), errors.New("MessagesNotFound")
+	}
 
 	message := messages.Messages[0]
 
@@ -245,10 +265,11 @@ func getMainSummary(spreadsheet excelize.File, lastUpdateTime time.Time) MainSum
 
 	mainSummaryPatients := MainSummaryPatients{}
 
-	for i := 0; i < 7; i++ {
+	for i := 0; i < 8; i++ {
 		mainSummaryPatients.Children = append(mainSummaryPatients.Children, SummarySection{})
 	}
 
+	// 陽性患者数
 	for j := 1; j <= rowLength; j++ {
 		cellPos, _ := excelize.CoordinatesToCellName(3, j)
 		cellValue, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
@@ -260,6 +281,7 @@ func getMainSummary(spreadsheet excelize.File, lastUpdateTime time.Time) MainSum
 		}
 	}
 
+	// 入院患者数
 	for j := 1; j <= rowLength; j++ {
 		cellPos, _ := excelize.CoordinatesToCellName(5, j)
 		cellValue, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
@@ -271,68 +293,86 @@ func getMainSummary(spreadsheet excelize.File, lastUpdateTime time.Time) MainSum
 		}
 	}
 
+	// 高度重症病床
 	for j := 1; j <= rowLength; j++ {
 		cellPos, _ := excelize.CoordinatesToCellName(6, j)
 		cellValue, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
 		if cellValue != "" {
-			mainSummaryPatients.Children[1].Attr = "重症者"
+			mainSummaryPatients.Children[1].Attr = "高度重症病床"
 			value, _ := strconv.Atoi(cellValue)
 			mainSummaryPatients.Children[1].Value = value
 			break
 		}
 	}
 
+	// その他
 	for j := 1; j <= rowLength; j++ {
 		cellPos, _ := excelize.CoordinatesToCellName(7, j)
 		cellValue, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
 		if cellValue != "" {
-			mainSummaryPatients.Children[2].Attr = "宿泊施設"
+			mainSummaryPatients.Children[2].Attr = "その他"
 			value, _ := strconv.Atoi(cellValue)
 			mainSummaryPatients.Children[2].Value = value
 			break
 		}
 	}
 
+	// 宿泊施設
 	for j := 1; j <= rowLength; j++ {
 		cellPos, _ := excelize.CoordinatesToCellName(8, j)
 		cellValue, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
 		if cellValue != "" {
-			mainSummaryPatients.Children[3].Attr = "自宅療養"
+			mainSummaryPatients.Children[3].Attr = "宿泊施設"
 			value, _ := strconv.Atoi(cellValue)
 			mainSummaryPatients.Children[3].Value = value
 			break
 		}
 	}
 
+	// 自宅療養
 	for j := 1; j <= rowLength; j++ {
 		cellPos, _ := excelize.CoordinatesToCellName(9, j)
 		cellValue, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
 		if cellValue != "" {
-			mainSummaryPatients.Children[4].Attr = "死亡"
+			mainSummaryPatients.Children[4].Attr = "自宅療養"
 			value, _ := strconv.Atoi(cellValue)
 			mainSummaryPatients.Children[4].Value = value
 			break
 		}
 	}
 
+	// 死亡
 	for j := 1; j <= rowLength; j++ {
-		cellPos, _ := excelize.CoordinatesToCellName(4, j)
+		cellPos, _ := excelize.CoordinatesToCellName(10, j)
 		cellValue, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
 		if cellValue != "" {
-			mainSummaryPatients.Children[5].Attr = "退院・解除"
+			mainSummaryPatients.Children[5].Attr = "死亡"
 			value, _ := strconv.Atoi(cellValue)
 			mainSummaryPatients.Children[5].Value = value
 			break
 		}
 	}
 
+	// 退院
 	for j := 1; j <= rowLength; j++ {
-		cellPos, _ := excelize.CoordinatesToCellName(10, j)
+		cellPos, _ := excelize.CoordinatesToCellName(4, j)
 		cellValue, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
 		if cellValue != "" {
-			mainSummaryPatients.Children[6].Attr = "調整中"
+			mainSummaryPatients.Children[6].Attr = "退院・解除"
 			value, _ := strconv.Atoi(cellValue)
 			mainSummaryPatients.Children[6].Value = value
+			break
+		}
+	}
+
+	// 調整中
+	for j := 1; j <= rowLength; j++ {
+		cellPos, _ := excelize.CoordinatesToCellName(11, j)
+		cellValue, _ := spreadsheet.GetCellValue("PCR検査件数", cellPos)
+		if cellValue != "" {
+			mainSummaryPatients.Children[7].Attr = "調整中"
+			value, _ := strconv.Atoi(cellValue)
+			mainSummaryPatients.Children[7].Value = value
 			break
 		}
 	}
